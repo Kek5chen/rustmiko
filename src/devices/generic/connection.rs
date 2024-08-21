@@ -1,5 +1,4 @@
 use std::io;
-use std::io::Write;
 use std::net::ToSocketAddrs;
 use std::time::Duration;
 use telnet::{Event, Telnet};
