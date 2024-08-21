@@ -1,0 +1,10 @@
+[package]
+name = "rustmiko"
+description = "A Netmiko rewrite for Rust"
+authors = ["Kek5chen"]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Kek5chen/rustmiko"
+
+[dependencies]
