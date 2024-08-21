@@ -1,6 +1,5 @@
-use anyhow::bail;
 use rustmiko::devices::cisco::CiscoTelnet;
-use rustmiko::devices::generic::connection::{AuthorizedConnection, Connection};
+use rustmiko::devices::generic::connection::{AuthorizedConnection};
 use rustmiko::devices::generic::device_types::config::{Configurable, InterfaceConfigurable};
 
 fn main() -> anyhow::Result<()> {
@@ -15,16 +14,18 @@ fn main() -> anyhow::Result<()> {
 		},
 	};
 
-	let _ = cisco.login("admin", "qwertzuiopas");
+	let _ = cisco.login("admin", "admin");
 
 	{
 		let mut config = cisco.enter_config()?;
-		let interface = config.get_interface("FastEthernet", &[0, 7]);
-		&config.interface_down(&interface);
+		for index in 1..=8 {
+			let interface = config.get_interface("FastEthernet", &[0, index]);
+			let _ = config.interface_up(&interface);
+		}
 	}
 
 	if let Err(e) = cisco.save() {
-		eprintln!("Failed to save configuration");
+		eprintln!("Failed to save configuration: {e}");
 	}
 
 	Ok(())
