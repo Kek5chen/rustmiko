@@ -1,8 +1,3 @@
-use crate::devices::generic::device_types::config::ConfigurationMode;
-
-trait TripletInterfaces {
-}
-
 pub struct Interface {
 	name: String,
 }
@@ -10,11 +5,12 @@ pub struct Interface {
 impl Interface {
 	pub fn new<S: Into<String>>(name: S) -> Interface {
 		Interface {
-			name,
+			name: name.into(),
 		}
 	}
-	pub fn up(&mut self, config: ConfigurationMode) {
 
+	pub fn name(&self) -> &str {
+		&self.name
 	}
 }
 
