@@ -8,6 +8,8 @@ pub trait Configurable {
 
 	/// Enter the configuration mode
 	fn enter_config(&mut self) -> io::Result<ConfigurationMode<Self::SessionType>>;
+	/// Execute a raw command on the device, the state here can't be checked or enforced anymore.
+	fn execute_raw(&mut self, command: &str) -> io::Result<()>;
 	/// Exit the current state.
 	fn exit(&mut self) -> io::Result<()>;
 	/// Save the current running configuration to the device.
@@ -58,6 +60,11 @@ impl<'a, T: Configurable> ConfigurationMode<'a, T> {
 		ConfigurationMode {
 			session,
 		}
+	}
+
+	/// Execute any raw command on the device from configuration mode
+	pub fn execute_raw(&mut self, command: &str) -> io::Result<()> {
+		self.session.execute_raw(command)
 	}
 }
 
