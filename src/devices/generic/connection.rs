@@ -1,6 +1,7 @@
 use std::io;
 use std::net::ToSocketAddrs;
 use std::time::Duration;
+use log::debug;
 use telnet::{Event, Telnet};
 
 /// A Connection trait describes a basic set of functions that are necessary for the most basic of
@@ -39,13 +40,13 @@ impl Connection for TelnetConnection {
 				break;
 			}
 			if let Err(e) = event {
-				println!("Error discarded: {}", e);
+				debug!("Error discarded: {}", e);
 				break;
 			}
 			if let Ok(Event::Data(data)) = event {
-				println!("Discarded data {}", String::from_utf8_lossy(&data));
+				debug!("Discarded data {}", String::from_utf8_lossy(&data));
 			} else {
-				println!("Discarded event: {:?}", event);
+				debug!("Discarded event: {:?}", event);
 			}
 		}
 	}
