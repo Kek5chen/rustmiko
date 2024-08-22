@@ -4,11 +4,13 @@ use crate::devices::generic::device_types::config::{Configurable, ConfigurationM
 use crate::devices::generic::connection::{AuthorizedConnection, Connection, TelnetConnection};
 use crate::devices::generic::device_types::interfaces::Interface;
 
+/// Implementation of a Cisco device usable over telnet, wrapping a TelnetConnection.
 pub struct CiscoTelnet {
 	conn: TelnetConnection,
 }
 
 impl CiscoTelnet {
+	/// Initialize and connect to a cisco device using telnet at the specified address.
 	pub fn new<A: ToSocketAddrs>(addr: A) -> io::Result<CiscoTelnet> {
 		let mut telnet = CiscoTelnet {
 			conn: TelnetConnection::connect(addr)?,
@@ -25,6 +27,11 @@ impl Configurable for CiscoTelnet {
 		self.conn.execute_raw("configure terminal")?;
 		Ok(ConfigurationMode::enter(self))
 	}
+
+	fn execute_raw(&mut self, command: &str) -> io::Result<()> {
+		self.conn.execute_raw(command)
+	}
+
 	fn exit(&mut self) -> io::Result<()> {
 		self.conn.execute_raw("exit")
 	}
