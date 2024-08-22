@@ -14,7 +14,7 @@ use telnet::{Event, Telnet};
 pub trait Connection {
 	type ConnectionHandler;
 
-	/// Connects to the specified address.
+	/// Connects to the specified address using a Connection Handler.
 	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<Self::ConnectionHandler, Box<dyn Error>>;
 	/// Reads input, sent by the server but ignores it.
 	fn read_ignore(&mut self);
@@ -30,8 +30,8 @@ pub struct TelnetConnection {
 impl Connection for TelnetConnection {
 	type ConnectionHandler = TelnetConnection;
 
-	/// Connect to device at ip:port addr, with an optional username and password which are sent
-	/// to the device right after the connection is made.
+	/// Connect to device at ip:port addr, using telnet with an optional username and password
+	/// which are sent to the device right after the connection is made.
 	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<TelnetConnection, Box<dyn Error>> {
 		let mut conn = TelnetConnection {
 			conn: Telnet::connect(addr, 1024)?,
@@ -49,6 +49,7 @@ impl Connection for TelnetConnection {
 		Ok(conn)
 	}
 
+	/// Read input from the server, but just ignore it.
 	fn read_ignore(&mut self) {
 		loop {
 			let event = self.conn.read_timeout(Duration::from_secs(1));
@@ -67,6 +68,7 @@ impl Connection for TelnetConnection {
 		}
 	}
 
+	/// Execute a raw command. A new line is automatically appended for the user.
 	fn execute_raw(&mut self, command: &str) -> io::Result<()> {
 		self.conn.write(command.as_bytes())?;
 		self.conn.write(b"\n")?;
@@ -83,6 +85,8 @@ pub struct SSHConnection {
 impl Connection for SSHConnection {
 	type ConnectionHandler = SSHConnection;
 
+	/// Connect to device at ip:port addr using SSH, with an optional username and password
+	/// which are sent to the device right after the connection is made.
 	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<SSHConnection, Box<dyn Error>> {
 		let tcp = TcpStream::connect(addr)?;
 		let mut sess = Session::new()?;

@@ -5,6 +5,15 @@ use crate::devices::generic::connection::Connection;
 use crate::devices::generic::device_types::config::{Configurable, ConfigurationMode, InterfaceConfigurable};
 use crate::devices::generic::device_types::interfaces::Interface;
 
+/// A cisco (catalyst) device API implementation.
+///
+/// Usage of the base type is not suggested unless you implement your own ConnectionHandler.
+/// It's recommended to use one of the predefined types:
+/// [`CiscoSSH`] or
+/// [`CiscoTelnet`]
+///
+/// [`CiscoSSH`]: crate::devices::cisco::CiscoSSH
+/// [`CiscoTelnet`]: crate::devices::cisco::CiscoTelnet
 pub struct CiscoDevice<C: Connection> {
     connection: C,
 }

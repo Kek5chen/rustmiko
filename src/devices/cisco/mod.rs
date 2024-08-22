@@ -1,3 +1,4 @@
+//! All cisco device types.
 mod cisco_api;
 
 pub use cisco_api::CiscoDevice;
