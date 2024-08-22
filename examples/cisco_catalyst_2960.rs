@@ -1,9 +1,10 @@
 use rustmiko::devices::cisco::CiscoTelnet;
-use rustmiko::devices::generic::connection::{AuthorizedConnection};
 use rustmiko::devices::generic::device_types::config::{Configurable, InterfaceConfigurable};
 
 fn main() -> anyhow::Result<()> {
-	let mut cisco = match CiscoTelnet::new("192.168.178.1:23") {
+	env_logger::init();
+
+	let mut cisco = match CiscoTelnet::connect("192.168.178.1:23", "admin", "admin") {
 		Ok(cisco) => {
 			println!("Connected successfully");
 			cisco
@@ -14,13 +15,14 @@ fn main() -> anyhow::Result<()> {
 		},
 	};
 
-	let _ = cisco.login("admin", "admin");
-
 	{
 		let mut config = cisco.enter_config()?;
 		for index in 1..=8 {
-			let interface = config.get_interface("FastEthernet", &[0, index]);
-			let _ = config.interface_up(&interface);
+			let interface = config.get_interface("gi", &[0, index]);
+			match config.interface_up(&interface) {
+			    Ok(_) => println!("Interface {} is now up", interface.name()),
+			    Err(_) => println!("Failed to set Interface {} up", interface.name())
+			}
 		}
 	}
 

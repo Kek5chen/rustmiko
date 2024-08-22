@@ -29,7 +29,7 @@ pub trait InterfaceConfigurable {
 /// command set. This will lock the session into the configure mode until the object is dropped.
 ///
 /// ```
-/// let device = DeviceTelnet::new("127.0.0.1:23");
+/// let device = CiscoTelnet::new("127.0.0.1:23", "admin", "admin");
 /// {
 /// 	// locks device
 /// 	let config = device.enter_config()?;

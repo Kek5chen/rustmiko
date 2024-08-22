@@ -1,7 +1,10 @@
+use std::error::Error;
 use std::io;
-use std::net::ToSocketAddrs;
+use std::io::{Read, Write};
+use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
 use log::debug;
+use ssh2::{Channel, Session};
 use telnet::{Event, Telnet};
 
 /// A Connection trait describes a basic set of functions that are necessary for the most basic of
@@ -12,7 +15,7 @@ pub trait Connection {
 	type ConnectionHandler;
 
 	/// Connects to the specified address.
-	fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<Self::ConnectionHandler>;
+	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<Self::ConnectionHandler, Box<dyn Error>>;
 	/// Reads input, sent by the server but ignores it.
 	fn read_ignore(&mut self);
 	/// Executes a raw string command on the connection.
@@ -27,10 +30,23 @@ pub struct TelnetConnection {
 impl Connection for TelnetConnection {
 	type ConnectionHandler = TelnetConnection;
 
-	fn connect<A: ToSocketAddrs>(addr: A) -> io::Result<Self::ConnectionHandler> {
-		Ok(TelnetConnection {
-			conn: Telnet::connect(addr, 256)?,
-		})
+	/// Connect to device at ip:port addr, with an optional username and password which are sent
+	/// to the device right after the connection is made.
+	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<TelnetConnection, Box<dyn Error>> {
+		let mut conn = TelnetConnection {
+			conn: Telnet::connect(addr, 1024)?,
+		};
+
+		// Authenticate
+		if let Some(username) = username {
+			conn.execute_raw(username)?;
+
+			if let Some(password) = password {
+				conn.execute_raw(password)?;
+			}
+		}
+
+		Ok(conn)
 	}
 
 	fn read_ignore(&mut self) {
@@ -59,10 +75,49 @@ impl Connection for TelnetConnection {
 	}
 }
 
-/// This trait is implemented for connections that require some form of authorization
-/// against the device.
-///
-/// It provides the login() function that is needed to authorize after connecting.
-pub trait AuthorizedConnection {
-	fn login(&mut self, username: &str, password: &str) -> io::Result<()>;
+pub struct SSHConnection {
+	sess: Session,
+	channel: Channel,
+}
+
+impl Connection for SSHConnection {
+	type ConnectionHandler = SSHConnection;
+
+	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<SSHConnection, Box<dyn Error>> {
+		let tcp = TcpStream::connect(addr)?;
+		let mut sess = Session::new()?;
+
+		sess.set_tcp_stream(tcp);
+		sess.handshake()?;
+
+		let mut channel = sess.channel_session()?;
+
+		if let Some(username) = username {
+			channel.write_all(username.as_bytes())?;
+			if let Some(password) = password {
+				channel.write_all(password.as_bytes())?;
+			}
+		}
+
+		Ok(SSHConnection {
+			sess,
+			channel,
+		})
+	}
+
+	fn read_ignore(&mut self) {
+		let mut buf: Vec<u8> = Vec::with_capacity(1024);
+
+		match self.channel.read(&mut buf) {
+			Ok(s) => debug!("Ignored {} bytes: {}", s, String::from_utf8_lossy(&buf)),
+			Err(e) => debug!("Ignored error: {}", e),
+		};
+	}
+
+	fn execute_raw(&mut self, command: &str) -> io::Result<()> {
+		self.channel.write_all(command.as_bytes())?;
+		self.channel.write_all(b"\n")?;
+		self.read_ignore();
+		Ok(())
+	}
 }

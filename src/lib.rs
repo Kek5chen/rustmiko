@@ -7,32 +7,33 @@
 //! Example of usage (Cisco Catalyst 2960 Switch):
 //! ```rust
 //! fn main() -> anyhow::Result<()> {
-//!     let mut cisco = match CiscoTelnet::new("192.168.178.1:23") {
-//!         Ok(cisco) => {
-//!             println!("Connected successfully");
-//!             cisco
-//!         },
-//!         Err(e) => {
-//!             eprintln!("Failed to connect: {}", e);
-//!             return Ok(());
-//!         },
-//!     };
+//! 	let mut cisco = match CiscoTelnet::connect("192.168.1.101:23", "admin", "admin") {
+//! 		Ok(cisco) => {
+//! 			println!("Connected successfully");
+//! 			cisco
+//! 		},
+//! 		Err(e) => {
+//! 			eprintln!("Failed to connect: {}", e);
+//! 			return Ok(());
+//! 		},
+//! 	};
 //!
-//!     let _ = cisco.login("admin", "admin");
+//! 	{
+//! 		let mut config = cisco.enter_config()?;
+//! 		for index in 1..=8 {
+//! 			let interface = config.get_interface("gi", &[0, index]);
+//! 			match config.interface_up(&interface) {
+//!                 Ok(_) => println!("Interface {} is now up", interface.name()),
+//!                 Err(_) => println!("Failed to set Interface {} up", interface.name())
+//!             }
+//! 		}
+//! 	}
 //!
-//!     {
-//!         let mut config = cisco.enter_config()?;
-//!         for index in 1..=8 {
-//!             let interface = config.get_interface("FastEthernet", &[0, index]);
-//!             let _ = config.interface_up(&interface);
-//!         }
-//!     }
+//! 	if let Err(e) = cisco.save() {
+//! 		eprintln!("Failed to save configuration: {e}");
+//! 	}
 //!
-//!     if let Err(e) = cisco.save() {
-//!         eprintln!("Failed to save configuration: {e}");
-//!     }
-//!
-//!     Ok(())
+//! 	Ok(())
 //! }
 //! ```
 
