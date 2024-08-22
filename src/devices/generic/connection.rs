@@ -78,6 +78,7 @@ impl Connection for TelnetConnection {
 }
 
 pub struct SSHConnection {
+	#[allow(dead_code)]
 	sess: Session,
 	channel: Channel,
 }
