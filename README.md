@@ -2,6 +2,9 @@
 
 (Currently) less compatible, but better typed Netmiko alternative in Rust.
 
+## Documentation
+Documentation is available on [docs.rs](https://docs.rs/rustmiko/latest).
+
 # Compatibility
 
 | Type      | Meaning                                |
