@@ -14,6 +14,7 @@
 | Brand   | Device               | Support |
 |---------|----------------------|---------|
 | Cisco   | Catalyst 2960 Series | Full    |
+| Juniper | EX Series            | Partial |
 
 # Example
 
