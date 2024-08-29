@@ -89,40 +89,68 @@ impl Connection for SSHConnection {
 	/// Connect to device at ip:port addr using SSH, with an optional username and password
 	/// which are sent to the device right after the connection is made.
 	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<SSHConnection, Box<dyn Error>> {
+		if username.is_none() || password.is_none() {
+			// Could also panic here because this should never happen as it's implemented on the
+			// device side
+			return Err("Can't connect to SSH without username and password".into());
+		}
+
 		let tcp = TcpStream::connect(addr)?;
 		let mut sess = Session::new()?;
+		sess.set_timeout(5000);
 
 		sess.set_tcp_stream(tcp);
 		sess.handshake()?;
 
-		let mut channel = sess.channel_session()?;
+		let username = username.unwrap();
+		let password = password.unwrap();
+		sess.userauth_password(username, password)?;
 
-		if let Some(username) = username {
-			channel.write_all(username.as_bytes())?;
-			if let Some(password) = password {
-				channel.write_all(password.as_bytes())?;
-			}
+		if !sess.authenticated() {
+			return Err("Couldn't authenticate properly against SSH Server".into());
 		}
 
-		Ok(SSHConnection {
+		let mut channel = sess.channel_session()?;
+		channel.request_pty("rustmiko", None, None)?;
+		channel.shell()?;
+
+		let conn = SSHConnection {
 			sess,
 			channel,
-		})
+		};
+
+		Ok(conn)
 	}
 
 	fn read_ignore(&mut self) {
-		let mut buf: Vec<u8> = Vec::with_capacity(1024);
+		debug!("Reading...");
+		loop {
+			let mut buf = [0u8; 1024];
 
-		match self.channel.read(&mut buf) {
-			Ok(s) => debug!("Ignored {} bytes: {}", s, String::from_utf8_lossy(&buf)),
-			Err(e) => debug!("Ignored error: {}", e),
-		};
+			let size = match self.channel.read(&mut buf) {
+				Ok(s) => s,
+				Err(ref e) if e.kind() == io::ErrorKind::TimedOut => {
+					debug!("Timed out... Assuming no data");
+					break;
+				}
+				Err(e) => {
+					debug!("Ignored error: {}", e);
+					break;
+				},
+			};
+
+			let str = String::from_utf8_lossy(&buf[..size]);
+			debug!("Ignored \"{}\"", str);
+		}
 	}
 
 	fn execute_raw(&mut self, command: &str) -> io::Result<()> {
+		debug!("Wrote: {}", command);
+
 		self.channel.write_all(command.as_bytes())?;
 		self.channel.write_all(b"\n")?;
 		self.read_ignore();
+
 		Ok(())
 	}
 }
