@@ -17,20 +17,20 @@ fn main() -> anyhow::Result<()> {
         },
     };
 
-    juniper.execute_raw("cli")?;
+    juniper.enter_cli()?;
     {
         let mut config = juniper.enter_config()?;
         let interface = config.get_interface("ge-", &[0, 0, 0]);
 
         config.interface_down(&interface)?;
 
-        config.execute_raw("commit")?;
+        config.commit()?;
 
         sleep(Duration::from_secs(20)); // commit might take a while longer than the default read timeout of 5 seconds
 
         config.interface_up(&interface)?;
 
-        config.execute_raw("commit")?;
+        config.commit()?;
     }
 
     Ok(())

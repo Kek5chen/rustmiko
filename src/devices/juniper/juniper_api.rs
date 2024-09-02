@@ -49,10 +49,6 @@ impl<C: Connection> Configurable for JuniperDevice<C> {
     fn exit(&mut self) -> io::Result<()> {
         self.execute_raw("exit")
     }
-
-    fn save(&mut self) -> io::Result<()> {
-        Ok(())
-    }
 }
 
 impl<'a, C: Connection> InterfaceConfigurable for ConfigurationMode<'a, JuniperDevice<C>> {
@@ -62,5 +58,11 @@ impl<'a, C: Connection> InterfaceConfigurable for ConfigurationMode<'a, JuniperD
 
     fn interface_down(&mut self, interface: &Interface) -> io::Result<()> {
         self.session.execute_raw(&format!("set interfaces {} disable", interface.name()))
+    }
+}
+
+impl<T: Connection> ConfigurationMode<'_, JuniperDevice<T>> {
+    pub fn commit(&mut self) -> io::Result<()> {
+        self.session.execute_raw("commit")
     }
 }

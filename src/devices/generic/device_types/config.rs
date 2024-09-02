@@ -12,8 +12,6 @@ pub trait Configurable {
 	fn execute_raw(&mut self, command: &str) -> io::Result<()>;
 	/// Exit the current state.
 	fn exit(&mut self) -> io::Result<()>;
-	/// Save the current running configuration to the device.
-	fn save(&mut self) -> io::Result<()>;
 }
 
 /// This trait describes a device that has interfaces it can bring up or down.

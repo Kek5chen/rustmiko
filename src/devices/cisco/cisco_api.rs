@@ -35,6 +35,10 @@ impl<C: Connection<ConnectionHandler = C>> CiscoDevice<C> {
         }
         Ok(())
     }
+
+    pub fn save(&mut self) -> io::Result<()> {
+        self.execute_raw("write memory")
+    }
 }
 
 impl<C: Connection> Configurable for CiscoDevice<C> {
