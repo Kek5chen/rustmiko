@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
 
         config.commit()?;
 
-        sleep(Duration::from_secs(20)); // commit might take a while longer than the default read timeout of 5 seconds
+        sleep(Duration::from_secs(20));
 
         config.interface_up(&interface)?;
 
