@@ -2,7 +2,7 @@
 name = "rustmiko"
 description = "A Netmiko rewrite for Rust"
 authors = ["Kek5chen"]
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/Kek5chen/rustmiko"
