@@ -22,10 +22,13 @@ pub struct JuniperDevice<C: Connection> {
 
 impl<C: Connection<ConnectionHandler = C>> JuniperDevice<C> {
     pub fn connect<A: ToSocketAddrs>(addr: A, username: &str, password: &str) -> Result<JuniperDevice<C>, Box<dyn Error>> {
-        Ok(JuniperDevice {
+        let mut device = JuniperDevice {
             connection: C::connect(addr, Some(username), Some(password))?,
-            prompt_end: Regex::new(r"[>#]")?,
-        })
+            prompt_end: Regex::new(r"[>#%]")?,
+        };
+
+        device.connection.read_ignore(&device.prompt_end);
+        Ok(device)
     }
 
     pub fn enter_cli(&mut self) -> io::Result<()> {
