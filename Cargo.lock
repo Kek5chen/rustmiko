@@ -285,6 +285,7 @@ dependencies = [
  "anyhow",
  "env_logger",
  "log",
+ "regex",
  "ssh2",
  "telnet",
 ]
