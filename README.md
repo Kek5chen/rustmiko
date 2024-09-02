@@ -17,7 +17,8 @@ Documentation is available on [docs.rs](https://docs.rs/rustmiko/latest).
 | Brand   | Device               | Support |
 |---------|----------------------|---------|
 | Cisco   | Catalyst 2960 Series | Full    |
-| Juniper | EX Series            | Partial |
+| Juniper | EX Series            | Full    |
+| Juniper | SRX Series           | Full    |
 
 # Example
 
