@@ -1,8 +1,10 @@
 use std::error::Error;
+use std::fmt::format;
 use std::io;
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 use std::time::Duration;
+use anyhow::format_err;
 use log::debug;
 use ssh2::{Channel, Session};
 use telnet::{Event, Telnet};
@@ -89,6 +91,46 @@ pub struct SSHConnection {
 	channel: Channel,
 }
 
+impl SSHConnection {
+	fn establish_connection<A: ToSocketAddrs>(addr: A, timeout: Option<Duration>) -> Result<Session, Box<dyn Error>> {
+		let tcp = match timeout {
+			None => TcpStream::connect(addr)?,
+			// TODO: Handle this better
+			Some(timeout) => TcpStream::connect_timeout(&addr.to_socket_addrs()?.next().ok_or_else(|| format_err!("uh"))?, timeout)?
+		};
+		let mut sess = Session::new()?;
+		sess.set_timeout(60000);
+
+		sess.set_tcp_stream(tcp);
+		sess.handshake()?;
+
+		Ok(sess)
+	}
+
+	fn make_channel_session(session: Session) -> Result<SSHConnection, Box<dyn Error>>{
+		let mut channel = session.channel_session()?;
+		channel.request_pty("rustmiko", None, None)?;
+		channel.shell()?;
+
+		Ok(SSHConnection {
+			sess: session,
+			channel,
+		})
+	}
+
+	pub fn connect_agentauth<A: ToSocketAddrs>(addr: A, username: &str, timeout: Option<Duration>) -> Result<SSHConnection, Box<dyn Error>> {
+		let sess = Self::establish_connection(addr, timeout)?;
+
+		sess.userauth_agent(username)?;
+
+		if !sess.authenticated() {
+			return Err("Couldn't authenticate properly against SSH Server using SSH Agent.".into());
+		}
+
+		Self::make_channel_session(sess)
+	}
+}
+
 impl Connection for SSHConnection {
 	type ConnectionHandler = SSHConnection;
 
@@ -101,31 +143,17 @@ impl Connection for SSHConnection {
 			return Err("Can't connect to SSH without username and password".into());
 		}
 
-		let tcp = TcpStream::connect(addr)?;
-		let mut sess = Session::new()?;
-		sess.set_timeout(60000);
-
-		sess.set_tcp_stream(tcp);
-		sess.handshake()?;
+		let sess = Self::establish_connection(addr, None)?;
 
 		let username = username.unwrap();
 		let password = password.unwrap();
 		sess.userauth_password(username, password)?;
 
 		if !sess.authenticated() {
-			return Err("Couldn't authenticate properly against SSH Server".into());
+			return Err("Couldn't authenticate properly against SSH Server using password auth".into());
 		}
 
-		let mut channel = sess.channel_session()?;
-		channel.request_pty("rustmiko", None, None)?;
-		channel.shell()?;
-
-		let conn = SSHConnection {
-			sess,
-			channel,
-		};
-
-		Ok(conn)
+		Self::make_channel_session(sess)
 	}
 
 	fn read_ignore(&mut self, prompt_end: &Regex) {
