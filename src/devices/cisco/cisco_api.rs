@@ -71,3 +71,9 @@ impl<'a, C: Connection> InterfaceConfigurable for ConfigurationMode<'a, CiscoDev
         self.session.exit()
     }
 }
+
+impl<'a, C: Connection<ConnectionHandler = C>> ConfigurationMode<'a, CiscoDevice<C>> {
+    pub fn save(&mut self) -> io::Result<()> {
+        self.session.save()
+    }
+}
