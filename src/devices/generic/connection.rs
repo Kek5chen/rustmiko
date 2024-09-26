@@ -1,5 +1,4 @@
 use std::error::Error;
-use std::fmt::format;
 use std::io;
 use std::io::{Read, Write};
 use std::net::{TcpStream, ToSocketAddrs};
@@ -91,12 +90,25 @@ pub struct SSHConnection {
 	channel: Channel,
 }
 
+// TODO: Builder pattern to potentially handle timeouts better?
 impl SSHConnection {
 	fn establish_connection<A: ToSocketAddrs>(addr: A, timeout: Option<Duration>) -> Result<Session, Box<dyn Error>> {
 		let tcp = match timeout {
 			None => TcpStream::connect(addr)?,
-			// TODO: Handle this better
-			Some(timeout) => TcpStream::connect_timeout(&addr.to_socket_addrs()?.next().ok_or_else(|| format_err!("uh"))?, timeout)?
+			Some(timeout) => {
+				let mut result = None;
+				for addr in addr.to_socket_addrs()? {
+					result = Some(TcpStream::connect_timeout(&addr, timeout));
+					match result {
+						Some(Ok(_)) => break,
+						_ => continue,
+					}
+				}
+				match result {
+					None => Err(format_err!("No socket address was supplied in addr"))?,
+					Some(result) => result?
+				}
+			}
 		};
 		let mut sess = Session::new()?;
 		sess.set_timeout(60000);
