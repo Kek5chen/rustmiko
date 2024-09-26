@@ -5,7 +5,7 @@
 //! with network devices, emphasizing ease of use and abstraction over low-level detail management.
 //!
 //! Example of usage (Cisco Catalyst 2960 Switch):
-//! ```rust
+//! ```ignore
 //! fn main() -> anyhow::Result<()> {
 //! 	let mut cisco = match CiscoTelnet::connect("192.168.1.101:23", "admin", "admin") {
 //! 		Ok(cisco) => {

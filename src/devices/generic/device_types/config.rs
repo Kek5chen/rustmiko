@@ -26,7 +26,7 @@ pub trait InterfaceConfigurable {
 /// the "normal mode". When you configure a device, usually you enter a special mode with a custom
 /// command set. This will lock the session into the configure mode until the object is dropped.
 ///
-/// ```
+/// ```ignore
 /// let device = CiscoTelnet::new("127.0.0.1:23", "admin", "admin");
 /// {
 /// 	// locks device
