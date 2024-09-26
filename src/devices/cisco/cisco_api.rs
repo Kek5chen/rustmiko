@@ -72,6 +72,7 @@ impl<'a, C: Connection> InterfaceConfigurable for ConfigurationMode<'a, CiscoDev
     }
 }
 
+/// Reaches the save command through to the session, since cisco allows saving in config mode
 impl<'a, C: Connection<ConnectionHandler = C>> ConfigurationMode<'a, CiscoDevice<C>> {
     pub fn save(&mut self) -> io::Result<()> {
         self.session.save()
