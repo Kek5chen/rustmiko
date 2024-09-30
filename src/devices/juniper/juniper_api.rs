@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 use std::net::ToSocketAddrs;
 use regex::Regex;
-use crate::devices::generic::connection::Connection;
+use crate::devices::generic::connection::{Connection, ConnectionOptions};
 use crate::devices::generic::device_types::config::{Configurable, ConfigurationMode, InterfaceConfigurable};
 use crate::devices::generic::device_types::interfaces::Interface;
 
@@ -23,7 +23,17 @@ pub struct JuniperDevice<C: Connection> {
 impl<C: Connection<ConnectionHandler = C>> JuniperDevice<C> {
     pub fn connect<A: ToSocketAddrs>(addr: A, username: &str, password: &str) -> Result<JuniperDevice<C>, Box<dyn Error>> {
         let mut device = JuniperDevice {
-            connection: C::connect(addr, Some(username), Some(password))?,
+            connection: C::connect(addr, &ConnectionOptions::from_auth(username, password))?,
+            prompt_end: Regex::new(r"[>#%]")?,
+        };
+
+        device.connection.read_ignore(&device.prompt_end);
+        Ok(device)
+    }
+
+    pub fn connect_opts<A: ToSocketAddrs>(addr: A, opts: &ConnectionOptions) -> Result<JuniperDevice<C>, Box<dyn Error>> {
+        let mut device = JuniperDevice {
+            connection: C::connect(addr, opts)?,
             prompt_end: Regex::new(r"[>#%]")?,
         };
 

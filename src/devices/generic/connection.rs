@@ -9,6 +9,47 @@ use ssh2::{Channel, Session};
 use telnet::{Event, Telnet};
 use regex::Regex;
 
+pub struct ConnectionOptions<'a> {
+	pub username: Option<&'a str>,
+	pub password: Option<&'a str>,
+	pub timeout: Option<Duration>,
+}
+
+impl Default for ConnectionOptions<'_> {
+	fn default() -> Self {
+		ConnectionOptions {
+			username: None,
+			password: None,
+			timeout: None,
+		}
+	}
+}
+
+impl<'a> ConnectionOptions<'a> {
+	pub fn from_auth(username: &'a str, password: &'a str) -> Self {
+		ConnectionOptions {
+			username: Some(username),
+			password: Some(password),
+			timeout: None,
+		}
+	}
+
+	pub fn with_username(mut self, username: &'a str) -> Self {
+		self.username = Some(username);
+		self
+	}
+
+	pub fn with_password(mut self, password: &'a str) -> Self {
+		self.password = Some(password);
+		self
+	}
+
+	pub fn with_timeout(mut self, timeout: Duration) -> Self {
+		self.timeout = Some(timeout);
+		self
+	}
+}
+
 /// A Connection trait describes a basic set of functions that are necessary for the most basic of
 /// implementations.
 ///
@@ -17,7 +58,7 @@ pub trait Connection {
 	type ConnectionHandler;
 
 	/// Connects to the specified address using a Connection Handler.
-	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<Self::ConnectionHandler, Box<dyn Error>>;
+	fn connect<A: ToSocketAddrs>(addr: A, opts: &ConnectionOptions) -> Result<Self::ConnectionHandler, Box<dyn Error>>;
 	/// Reads input, sent by the server but ignores it.
 	fn read_ignore(&mut self, prompt_end: &Regex);
 	/// Executes a raw string command on the connection.
@@ -34,16 +75,24 @@ impl Connection for TelnetConnection {
 
 	/// Connect to device at ip:port addr, using telnet with an optional username and password
 	/// which are sent to the device right after the connection is made.
-	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<TelnetConnection, Box<dyn Error>> {
+	fn connect<A: ToSocketAddrs>(addr: A, opts: &ConnectionOptions) -> Result<TelnetConnection, Box<dyn Error>> {
+		let telnet_conn = match opts.timeout {
+			None => Telnet::connect(addr, 1024)?,
+			Some(timeout) => {
+				addr.to_socket_addrs()?
+					.find_map(|addr| Telnet::connect_timeout(&addr, 1024, timeout).ok())
+					.ok_or_else(|| format_err!("No valid socket address was supplied in addr"))?
+			}
+		};
 		let mut conn = TelnetConnection {
-			conn: Telnet::connect(addr, 1024)?,
+			conn: telnet_conn,
 		};
 
 		// Authenticate
-		if let Some(username) = username {
+		if let Some(username) = opts.username {
 			conn.execute_raw(username, &Regex::new("[Pp]assword")?)?;
 
-			if let Some(password) = password {
+			if let Some(password) = opts.password {
 				conn.execute_raw(password, &Regex::new("^([Uu]sername)")?)?;
 			}
 		}
@@ -90,24 +139,14 @@ pub struct SSHConnection {
 	channel: Channel,
 }
 
-// TODO: Builder pattern to potentially handle timeouts better?
 impl SSHConnection {
 	fn establish_connection<A: ToSocketAddrs>(addr: A, timeout: Option<Duration>) -> Result<Session, Box<dyn Error>> {
 		let tcp = match timeout {
 			None => TcpStream::connect(addr)?,
 			Some(timeout) => {
-				let mut result = None;
-				for addr in addr.to_socket_addrs()? {
-					result = Some(TcpStream::connect_timeout(&addr, timeout));
-					match result {
-						Some(Ok(_)) => break,
-						_ => continue,
-					}
-				}
-				match result {
-					None => Err(format_err!("No socket address was supplied in addr"))?,
-					Some(result) => result?
-				}
+				addr.to_socket_addrs()?
+					.find_map(|addr| TcpStream::connect_timeout(&addr, timeout).ok())
+					.ok_or_else(|| format_err!("No valid socket address was supplied in addr"))?
 			}
 		};
 		let mut sess = Session::new()?;
@@ -148,17 +187,17 @@ impl Connection for SSHConnection {
 
 	/// Connect to device at ip:port addr using SSH, with an optional username and password
 	/// which are sent to the device right after the connection is made.
-	fn connect<A: ToSocketAddrs>(addr: A, username: Option<&str>, password: Option<&str>) -> Result<SSHConnection, Box<dyn Error>> {
-		if username.is_none() || password.is_none() {
+	fn connect<A: ToSocketAddrs>(addr: A, opts: &ConnectionOptions) -> Result<SSHConnection, Box<dyn Error>> {
+		if opts.username.is_none() || opts.password.is_none() {
 			// Could also panic here because this should never happen as it's implemented on the
 			// device side
 			return Err("Can't connect to SSH without username and password".into());
 		}
 
-		let sess = Self::establish_connection(addr, None)?;
+		let sess = Self::establish_connection(addr, opts.timeout)?;
 
-		let username = username.unwrap();
-		let password = password.unwrap();
+		let username = opts.username.unwrap();
+		let password = opts.password.unwrap();
 		sess.userauth_password(username, password)?;
 
 		if !sess.authenticated() {

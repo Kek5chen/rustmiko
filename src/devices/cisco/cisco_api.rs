@@ -2,7 +2,7 @@ use std::error::Error;
 use std::io;
 use std::net::ToSocketAddrs;
 use regex::Regex;
-use crate::devices::generic::connection::Connection;
+use crate::devices::generic::connection::{Connection, ConnectionOptions};
 use crate::devices::generic::device_types::config::{Configurable, ConfigurationMode, InterfaceConfigurable};
 use crate::devices::generic::device_types::interfaces::Interface;
 
@@ -23,7 +23,14 @@ pub struct CiscoDevice<C: Connection> {
 impl<C: Connection<ConnectionHandler = C>> CiscoDevice<C> {
     pub fn connect<A: ToSocketAddrs>(addr: A, username: &str, password: &str) -> Result<CiscoDevice<C>, Box<dyn Error>> {
         Ok(CiscoDevice {
-            connection: C::connect(addr, Some(username), Some(password))?,
+            connection: C::connect(addr, &ConnectionOptions::from_auth(username, password))?,
+            prompt_end: Regex::new("#")?,
+        })
+    }
+
+    pub fn connect_opts<A: ToSocketAddrs>(addr: A, opts: &ConnectionOptions) -> Result<CiscoDevice<C>, Box<dyn Error>> {
+        Ok(CiscoDevice {
+            connection: C::connect(addr, opts)?,
             prompt_end: Regex::new("#")?,
         })
     }
@@ -73,7 +80,7 @@ impl<'a, C: Connection> InterfaceConfigurable for ConfigurationMode<'a, CiscoDev
 }
 
 /// Reaches the save command through to the session, since cisco allows saving in config mode
-impl<'a, C: Connection<ConnectionHandler = C>> ConfigurationMode<'a, CiscoDevice<C>> {
+impl<'a, C: Connection<ConnectionHandler=C>> ConfigurationMode<'a, CiscoDevice<C>> {
     pub fn save(&mut self) -> io::Result<()> {
         self.session.save()
     }
