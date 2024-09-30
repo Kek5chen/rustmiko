@@ -82,7 +82,7 @@ impl Connection for TelnetConnection {
 			Some(timeout) => {
 				addr.to_socket_addrs()?
 					.find_map(|addr| Telnet::connect_timeout(&addr, 1024, timeout).ok())
-					.ok_or_else(|| format_err!("No valid socket address was supplied in addr"))?
+					.ok_or_else(|| format_err!("Host(s) not reachable"))?
 			}
 		};
 		let mut conn = TelnetConnection {
@@ -147,7 +147,7 @@ impl SSHConnection {
 			Some(timeout) => {
 				addr.to_socket_addrs()?
 					.find_map(|addr| TcpStream::connect_timeout(&addr, timeout).ok())
-					.ok_or_else(|| format_err!("No valid socket address was supplied in addr"))?
+					.ok_or_else(|| format_err!("Host(s) not reachable"))?
 			}
 		};
 		let mut sess = Session::new()?;
