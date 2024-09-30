@@ -9,10 +9,11 @@ use ssh2::{Channel, Session};
 use telnet::{Event, Telnet};
 use regex::Regex;
 
+#[derive(Debug, Clone)]
 pub struct ConnectionOptions<'a> {
-	pub username: Option<&'a str>,
-	pub password: Option<&'a str>,
-	pub timeout: Option<Duration>,
+    pub username: Option<&'a str>,
+    pub password: Option<&'a str>,
+    pub timeout: Option<Duration>,
 }
 
 impl Default for ConnectionOptions<'_> {
